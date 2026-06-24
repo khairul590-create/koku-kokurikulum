@@ -73,6 +73,17 @@ export function Layout() {
             <div className="b1">🌟 SMART KOKURIKULUM</div>
             <div className="b2">Bina Sahsiah, Lahir Pemimpin</div>
           </div>
+          {authed && (
+            <button
+              className="sidebar-logout"
+              onClick={() => {
+                setMenuOpen(false)
+                logout()
+              }}
+            >
+              🚪 Log Keluar
+            </button>
+          )}
         </div>
       </aside>
 
