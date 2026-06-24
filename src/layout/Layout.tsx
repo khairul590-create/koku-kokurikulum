@@ -35,7 +35,9 @@ export function Layout() {
       {menuOpen && <div className="sidebar-overlay" onClick={() => setMenuOpen(false)} />}
       <aside className={'sidebar' + (menuOpen ? ' open' : '')}>
         <div className="sidebar-logo">
-          <div className="logo-circle">🎓</div>
+          <div className="logo-circle">
+            <img src="/icon.svg" alt="Logo" width={42} height={42} />
+          </div>
           <div className="logo-text">
             <div className="school-name">SK DARAU</div>
             <div className="school-sub">Kota Kinabalu, Sabah</div>

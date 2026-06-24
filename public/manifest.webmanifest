@@ -1,0 +1,21 @@
+{
+  "name": "Sistem Pengurusan Kokurikulum SK Darau",
+  "short_name": "Kokurikulum",
+  "description": "Pengurusan kokurikulum & PAJSK SK Darau — dashboard, markah, kehadiran, pencapaian, laporan.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#070718",
+  "theme_color": "#311b92",
+  "lang": "ms",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
