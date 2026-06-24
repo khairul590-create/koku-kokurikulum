@@ -7,6 +7,7 @@ const NAV = [
   { section: 'Dashboard' },
   { to: '/', icon: '📊', label: 'Dashboard', end: true },
   { section: 'Pengurusan Kokurikulum' },
+  { to: '/murid', icon: '🧑‍🎓', label: 'Urus Murid' },
   { to: '/kelab', icon: '🎨', label: 'Kelab & Persatuan' },
   { to: '/beruniform', icon: '🎖️', label: 'Pasukan Beruniform' },
   { to: '/sukan', icon: '⚽', label: 'Sukan & Permainan' },
