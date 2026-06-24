@@ -18,6 +18,8 @@ app.onError((err, c) => {
   return c.json({ error: err.message || 'Ralat pelayan' }, 500)
 })
 
+app.notFound((c) => c.json({ error: 'Not found', path: c.req.path }, 404))
+
 // ─────────────── AUTH ───────────────
 app.post('/auth/login', async (c) => {
   const { password } = await c.req.json().catch(() => ({}))

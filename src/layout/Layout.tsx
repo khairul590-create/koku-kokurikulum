@@ -27,10 +27,12 @@ const NAV = [
 export function Layout() {
   const { authed, logout } = useAuth()
   const [showLogin, setShowLogin] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   return (
     <div className="app-shell">
-      <aside className="sidebar">
+      {menuOpen && <div className="sidebar-overlay" onClick={() => setMenuOpen(false)} />}
+      <aside className={'sidebar' + (menuOpen ? ' open' : '')}>
         <div className="sidebar-logo">
           <div className="logo-circle">🎓</div>
           <div className="logo-text">
@@ -49,6 +51,7 @@ export function Layout() {
               key={item.to}
               to={item.to}
               end={'end' in item ? item.end : false}
+              onClick={() => setMenuOpen(false)}
               className={({ isActive }) =>
                 'sidebar-item' + (isActive ? ' active' : '')
               }
@@ -68,12 +71,21 @@ export function Layout() {
 
       <div className="main">
         <div className="topbar">
-          <div>
-            <div className="topbar-title">
-              🎓 SISTEM PENGURUSAN KOKURIKULUM SK DARAU
-            </div>
-            <div className="topbar-sub">
-              Pentaksiran Aktiviti Jasmani, Sukan & Kokurikulum (PAJSK)
+          <div className="topbar-left">
+            <button
+              className="hamburger-btn"
+              onClick={() => setMenuOpen((v) => !v)}
+              aria-label="Menu"
+            >
+              ☰
+            </button>
+            <div>
+              <div className="topbar-title">
+                🎓 SISTEM PENGURUSAN KOKURIKULUM SK DARAU
+              </div>
+              <div className="topbar-sub">
+                Pentaksiran Aktiviti Jasmani, Sukan & Kokurikulum (PAJSK)
+              </div>
             </div>
           </div>
           {authed ? (
