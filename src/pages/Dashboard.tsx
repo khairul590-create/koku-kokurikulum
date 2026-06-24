@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { api } from '../lib/api'
+import { useSettings } from '../lib/settings'
 import { Loading } from '../components/ui'
 import {
   DashboardStats,
@@ -16,6 +17,7 @@ const GRADE_COLORS: Record<string, string> = {
 const LEVEL_COLORS = ['#5e35b1', '#1a73e8', '#0fa968', '#f9a825', '#e53935']
 
 export function Dashboard() {
+  const { settings } = useSettings()
   const { data, isLoading } = useQuery({
     queryKey: ['stats'],
     queryFn: () => api.get<DashboardStats>('/stats'),
@@ -23,12 +25,18 @@ export function Dashboard() {
 
   if (isLoading || !data) return <Loading />
 
+  const ann = settings.announcement
+
   const maxBar = Math.max(...data.unitAverages.map((u) => u.avg), 100)
   const topUnits = data.unitAverages.filter((u) => u.avg > 0).slice(0, 8)
   const maxLevel = Math.max(...data.levelDist.map((l) => l.count), 1)
 
   return (
     <>
+      {ann.active && ann.text && (
+        <div className="announce-banner">📢 {ann.text}</div>
+      )}
+
       {/* STAT CARDS */}
       <div className="stat-row">
         <Stat cls="sc1" icon="🧑‍🎓" val={data.totalStudents} label="Jumlah Murid" />

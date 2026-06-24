@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
+import { useSettings } from '../lib/settings'
 import { LoginModal } from './LoginModal'
 
 const NAV = [
@@ -27,6 +28,7 @@ const NAV = [
 
 export function Layout() {
   const { authed, logout } = useAuth()
+  const { settings } = useSettings()
   const [showLogin, setShowLogin] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
 
@@ -39,8 +41,10 @@ export function Layout() {
             <img src="/icon.svg" alt="Logo" width={42} height={42} />
           </div>
           <div className="logo-text">
-            <div className="school-name">SK DARAU</div>
-            <div className="school-sub">Kota Kinabalu, Sabah</div>
+            <div className="school-name">{settings.school.name.toUpperCase()}</div>
+            <div className="school-sub">
+              {[settings.school.daerah, settings.school.negeri].filter(Boolean).join(', ')}
+            </div>
           </div>
         </div>
 
@@ -91,37 +95,42 @@ export function Layout() {
               </div>
             </div>
           </div>
-          {authed ? (
-            <div className="topbar-user">
-              <div className="user-avatar">👨‍🏫</div>
-              <div>
-                <div className="user-name">Cikgu Azwani</div>
-                <div className="user-role">GPK Kokurikulum</div>
-                <button
-                  onClick={logout}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#ffd54f',
-                    fontSize: 10,
-                    cursor: 'pointer',
-                    padding: 0,
-                    marginTop: 2,
-                  }}
-                >
-                  Log keluar
-                </button>
-              </div>
-              <div className="user-dot" />
+          <div className="topbar-right">
+            <div className="session-chip" title="Sesi semasa">
+              📅 {settings.school.session}
             </div>
-          ) : (
-            <button
-              className="topbar-login-btn"
-              onClick={() => setShowLogin(true)}
-            >
-              🔑 Log Masuk Admin
-            </button>
-          )}
+            {authed ? (
+              <div className="topbar-user">
+                <div className="user-avatar">👨‍🏫</div>
+                <div>
+                  <div className="user-name">{settings.profile.name}</div>
+                  <div className="user-role">{settings.profile.jawatan}</div>
+                  <button
+                    onClick={logout}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#ffd54f',
+                      fontSize: 10,
+                      cursor: 'pointer',
+                      padding: 0,
+                      marginTop: 2,
+                    }}
+                  >
+                    Log keluar
+                  </button>
+                </div>
+                <div className="user-dot" />
+              </div>
+            ) : (
+              <button
+                className="topbar-login-btn"
+                onClick={() => setShowLogin(true)}
+              >
+                🔑 Log Masuk Admin
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="content">
