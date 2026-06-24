@@ -2,7 +2,12 @@ import { Context, Next } from 'hono'
 import { getCookie, setCookie } from 'hono/cookie'
 import { SignJWT, jwtVerify } from 'jose'
 
-const COOKIE = 'koku_session'
+const PROD = process.env.NODE_ENV === 'production'
+// __Host- prefix binds the cookie to the exact host over https with Path=/ and
+// no Domain — blocks subdomain/again-fixation attacks. Plain name in dev (http).
+const COOKIE = PROD ? '__Host-koku_session' : 'koku_session'
+const ISS = 'koku'
+const AUD = 'koku-admin'
 
 function secret(): Uint8Array {
   const s = process.env.JWT_SECRET
@@ -28,27 +33,34 @@ export async function issueSession(c: Context) {
   const token = await new SignJWT({ role: 'admin' })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setExpirationTime('7d')
+    .setIssuer(ISS)
+    .setAudience(AUD)
+    .setExpirationTime('2d')
     .sign(secret())
   setCookie(c, COOKIE, token, {
     httpOnly: true,
-    // Secure cookies require https; skip on local http dev so login works.
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'Lax',
+    // Secure required for __Host- prefix; skip on local http dev so login works.
+    secure: PROD,
+    sameSite: 'Strict',
     path: '/',
-    maxAge: 60 * 60 * 24 * 7,
+    maxAge: 60 * 60 * 24 * 2,
   })
 }
 
 export function clearSession(c: Context) {
-  setCookie(c, COOKIE, '', { path: '/', maxAge: 0 })
+  setCookie(c, COOKIE, '', { httpOnly: true, secure: PROD, sameSite: 'Strict', path: '/', maxAge: 0 })
 }
 
 export async function isAuthed(c: Context): Promise<boolean> {
   const token = getCookie(c, COOKIE)
   if (!token) return false
   try {
-    await jwtVerify(token, secret())
+    // Pin algorithm + issuer/audience to reject alg-confusion / foreign tokens.
+    await jwtVerify(token, secret(), {
+      algorithms: ['HS256'],
+      issuer: ISS,
+      audience: AUD,
+    })
     return true
   } catch {
     return false

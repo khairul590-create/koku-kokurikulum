@@ -19,6 +19,12 @@ const app = new Hono().basePath('/api')
 // are intentionally rejected by the browser. (Previously this reflected ANY
 // origin with credentials — removed.)
 
+// Never let sensitive API responses be cached by the browser/proxies.
+app.use('*', async (c, next) => {
+  await next()
+  c.header('Cache-Control', 'no-store, max-age=0')
+})
+
 app.onError((err, c) => {
   console.error(err) // full detail to logs only
   return c.json({ error: 'Ralat pelayan dalaman.' }, 500) // never leak internals

@@ -104,3 +104,17 @@ create table if not exists settings (
 );
 insert into settings (id, data) values (1, '{"school":"SK Darau","session":"2026"}')
   on conflict (id) do nothing;
+
+-- ── ROW LEVEL SECURITY ──
+-- Enable RLS on every table with NO policies. The service-role key (used by the
+-- API) bypasses RLS, so the app keeps working; the anon/public key gets ZERO
+-- access. This makes the public anon key safe even if it leaks, and blocks any
+-- direct PostgREST access that bypasses the API auth layer.
+alter table units         enable row level security;
+alter table students      enable row level security;
+alter table enrollments   enable row level security;
+alter table attendance    enable row level security;
+alter table pajsk_scores  enable row level security;
+alter table achievements  enable row level security;
+alter table activities    enable row level security;
+alter table settings      enable row level security;
