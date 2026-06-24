@@ -1,31 +1,64 @@
 import { Hono } from 'hono'
-import { cors } from 'hono/cors'
 import { handle } from 'hono/vercel'
 import { z } from 'zod'
 import { db } from './_lib/supabase'
 import { crud } from './_lib/crud'
-import { issueSession, clearSession, isAuthed, requireAuth } from './_lib/auth'
+import {
+  issueSession,
+  clearSession,
+  isAuthed,
+  safeEqual,
+} from './_lib/auth'
 import { gradeFromTotal } from '../shared/types'
 
 export const config = { runtime: 'edge' }
 
 const app = new Hono().basePath('/api')
 
-app.use('*', cors({ origin: (o) => o, credentials: true }))
+// No CORS middleware: the SPA and API are same-origin, so cross-origin requests
+// are intentionally rejected by the browser. (Previously this reflected ANY
+// origin with credentials — removed.)
 
 app.onError((err, c) => {
-  console.error(err)
-  return c.json({ error: err.message || 'Ralat pelayan' }, 500)
+  console.error(err) // full detail to logs only
+  return c.json({ error: 'Ralat pelayan dalaman.' }, 500) // never leak internals
 })
 
-app.notFound((c) => c.json({ error: 'Not found', path: c.req.path }, 404))
+app.notFound((c) => c.json({ error: 'Not found' }, 404))
 
 // ─────────────── AUTH ───────────────
+// Best-effort per-instance login throttle (edge instances are ephemeral, so
+// this is defense-in-depth, not a hard guarantee).
+const loginHits = new Map<string, { n: number; first: number }>()
+const WINDOW_MS = 10 * 60 * 1000
+const MAX_TRIES = 10
+
+function clientIp(c: { req: { header: (k: string) => string | undefined } }) {
+  return (
+    c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ||
+    c.req.header('x-real-ip') ||
+    'unknown'
+  )
+}
+
 app.post('/auth/login', async (c) => {
+  const ip = clientIp(c)
+  const now = Date.now()
+  const rec = loginHits.get(ip)
+  if (rec && now - rec.first < WINDOW_MS && rec.n >= MAX_TRIES)
+    return c.json({ error: 'Terlalu banyak cubaan. Cuba lagi kemudian.' }, 429)
+
   const { password } = await c.req.json().catch(() => ({}))
-  const expected = process.env.ADMIN_PASSWORD || 'admin123'
-  if (!password || password !== expected)
+  const expected = process.env.ADMIN_PASSWORD
+  if (!expected)
+    return c.json({ error: 'Sistem belum dikonfigur (ADMIN_PASSWORD).' }, 500)
+
+  if (typeof password !== 'string' || !safeEqual(password, expected)) {
+    if (!rec || now - rec.first >= WINDOW_MS) loginHits.set(ip, { n: 1, first: now })
+    else rec.n++
     return c.json({ error: 'Kata laluan salah' }, 401)
+  }
+  loginHits.delete(ip)
   await issueSession(c)
   return c.json({ ok: true })
 })
@@ -35,21 +68,37 @@ app.post('/auth/logout', (c) => {
 })
 app.get('/auth/me', async (c) => c.json({ authed: await isAuthed(c) }))
 
+// ─────────────── AUTH GUARD ───────────────
+// Everything below requires a valid admin session (protects student PII reads
+// too). Endpoints registered ABOVE this line stay public (auth/*). /health is
+// allowlisted explicitly.
+const PUBLIC_PATHS = new Set(['/api/health'])
+app.use('*', async (c, next) => {
+  const path = new URL(c.req.url).pathname
+  if (PUBLIC_PATHS.has(path)) return next()
+  if (await isAuthed(c)) return next()
+  return c.json({ error: 'Perlu log masuk admin' }, 401)
+})
+
 // ─────────────── SCHEMAS ───────────────
+const str = (max: number) => z.string().trim().max(max)
+const optStr = (max: number) => z.string().trim().max(max).optional().nullable()
+const dateStr = z.string().max(10).regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable()
+
 const unitSchema = z.object({
-  name: z.string().min(1),
+  name: str(120).min(1),
   kind: z.enum(['kelab', 'beruniform', 'sukan']),
-  advisor: z.string().optional().nullable(),
+  advisor: optStr(120),
 })
 const studentSchema = z.object({
-  name: z.string().min(1),
-  kelas: z.string().min(1),
+  name: str(120).min(1),
+  kelas: str(40).min(1),
   tahun: z.coerce.number().int().min(1).max(6),
 })
 const enrollmentSchema = z.object({
   student_id: z.string().uuid(),
   unit_id: z.string().uuid(),
-  role: z.string().optional().nullable(),
+  role: optStr(80),
   highest_level: z
     .enum(['sekolah', 'daerah', 'negeri', 'kebangsaan', 'antarabangsa'])
     .default('sekolah'),
@@ -58,34 +107,34 @@ const attendanceSchema = z.object({
   student_id: z.string().uuid(),
   unit_id: z.string().uuid(),
   week: z.coerce.number().int().min(1).max(52),
-  present: z.coerce.boolean(),
-  session: z.string().default('2026'),
+  present: z.boolean(),
+  session: str(20).default('2026'),
 })
 const pajskSchema = z.object({
   student_id: z.string().uuid(),
   unit_id: z.string().uuid(),
-  session: z.string().default('2026'),
-  m_kehadiran: z.coerce.number().min(0).default(0),
-  m_jawatan: z.coerce.number().min(0).default(0),
-  m_penglibatan: z.coerce.number().min(0).default(0),
-  m_pencapaian: z.coerce.number().min(0).default(0),
+  session: str(20).default('2026'),
+  m_kehadiran: z.coerce.number().min(0).max(100).default(0),
+  m_jawatan: z.coerce.number().min(0).max(100).default(0),
+  m_penglibatan: z.coerce.number().min(0).max(100).default(0),
+  m_pencapaian: z.coerce.number().min(0).max(100).default(0),
 })
 const achievementSchema = z.object({
   student_id: z.string().uuid().optional().nullable(),
   unit_id: z.string().uuid().optional().nullable(),
-  title: z.string().min(1),
+  title: str(160).min(1),
   level: z
     .enum(['sekolah', 'daerah', 'negeri', 'kebangsaan', 'antarabangsa'])
     .default('sekolah'),
-  position: z.string().optional().nullable(),
-  date: z.string().optional().nullable(),
+  position: optStr(80),
+  date: dateStr,
 })
 const activitySchema = z.object({
-  title: z.string().min(1),
-  date: z.string().optional().nullable(),
+  title: str(160).min(1),
+  date: dateStr,
   unit_id: z.string().uuid().optional().nullable(),
-  description: z.string().optional().nullable(),
-  status: z.string().default('dirancang'),
+  description: optStr(2000),
+  status: str(40).default('dirancang'),
 })
 
 const stuSel = 'id,name,kelas,tahun'
@@ -153,15 +202,25 @@ app.get('/settings', async (c) => {
   const { data } = await db().from('settings').select('data').eq('id', 1).single()
   return c.json(data?.data ?? {})
 })
-app.put('/settings', requireAuth, async (c) => {
-  const body = await c.req.json().catch(() => ({}))
+app.put('/settings', async (c) => {
+  const text = await c.req.text()
+  if (text.length > 50_000)
+    return c.json({ error: 'Tetapan terlalu besar.' }, 413)
+  let body: unknown
+  try {
+    body = text ? JSON.parse(text) : {}
+  } catch {
+    return c.json({ error: 'JSON tidak sah.' }, 400)
+  }
+  if (typeof body !== 'object' || body === null || Array.isArray(body))
+    return c.json({ error: 'Format tetapan tidak sah.' }, 400)
   const { data, error } = await db()
     .from('settings')
     .update({ data: body })
     .eq('id', 1)
     .select('data')
     .single()
-  if (error) return c.json({ error: error.message }, 400)
+  if (error) return c.json({ error: 'Gagal simpan tetapan.' }, 400)
   return c.json(data.data)
 })
 

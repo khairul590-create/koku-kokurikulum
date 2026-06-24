@@ -5,8 +5,23 @@ import { SignJWT, jwtVerify } from 'jose'
 const COOKIE = 'koku_session'
 
 function secret(): Uint8Array {
-  const s = process.env.JWT_SECRET || 'dev-insecure-secret-change-me'
+  const s = process.env.JWT_SECRET
+  if (!s) {
+    // Fail closed in production: no signing secret => refuse to mint/verify.
+    if (process.env.NODE_ENV === 'production')
+      throw new Error('JWT_SECRET tidak ditetapkan')
+    return new TextEncoder().encode('dev-only-insecure-secret')
+  }
   return new TextEncoder().encode(s)
+}
+
+// Constant-time string comparison to avoid leaking the password via timing.
+export function safeEqual(a: string, b: string): boolean {
+  if (typeof a !== 'string' || typeof b !== 'string') return false
+  if (a.length !== b.length) return false
+  let r = 0
+  for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i)
+  return r === 0
 }
 
 export async function issueSession(c: Context) {

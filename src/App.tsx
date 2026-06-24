@@ -1,4 +1,6 @@
 import { Routes, Route } from 'react-router-dom'
+import { useAuth } from './lib/auth'
+import { LoginScreen } from './pages/LoginScreen'
 import { Layout } from './layout/Layout'
 import { Dashboard } from './pages/Dashboard'
 import { UnitsPage } from './pages/UnitsPage'
@@ -15,6 +17,12 @@ import { Pengguna } from './pages/Pengguna'
 import { Bantuan } from './pages/Bantuan'
 
 export default function App() {
+  const { authed, loading } = useAuth()
+
+  if (loading)
+    return <div className="login-screen"><div className="loading">Memuatkan…</div></div>
+  if (!authed) return <LoginScreen />
+
   return (
     <Routes>
       <Route element={<Layout />}>
