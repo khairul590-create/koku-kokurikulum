@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { useList } from '../lib/hooks'
+import { StudentPicker } from '../components/StudentPicker'
 import { PageHeader, Loading, EmptyState, LevelBadge, GradeBadge } from '../components/ui'
 import { exportExcel, exportPdf } from '../lib/export'
 import {
@@ -17,7 +18,6 @@ interface Report {
 }
 
 export function LaporanIndividu() {
-  const { data: students } = useList<Student>('students')
   const { data: units } = useList<Unit>('units')
   const [id, setId] = useState('')
 
@@ -55,10 +55,9 @@ export function LaporanIndividu() {
         <div className="panel-head ph-blue"><span className="ph-icon">👤</span> Pilih Murid</div>
         <div className="panel-body">
           <div className="section-filter">
-            <select className="filter-select" value={id} onChange={(e) => setId(e.target.value)} style={{ minWidth: 240 }}>
-              <option value="">Pilih murid…</option>
-              {(students ?? []).map((s) => <option key={s.id} value={s.id}>{s.name} ({s.kelas})</option>)}
-            </select>
+            <div style={{ minWidth: 240, flex: '0 1 280px' }}>
+              <StudentPicker value={id} onChange={(sid) => setId(sid)} placeholder="Cari & pilih murid…" />
+            </div>
             {rpt && <>
               <button className="btn btn-sm btn-excel" onClick={doExcel}>📊 Excel</button>
               <button className="btn btn-sm btn-pdf" onClick={doPdf}>📄 PDF</button>

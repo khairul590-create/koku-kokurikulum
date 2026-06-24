@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Modal } from '../components/Modal'
 import { Field, PageHeader, Loading, EmptyState } from '../components/ui'
-import { useList, useCreate, useUpdate, useDelete } from '../lib/hooks'
+import { useList, useCreate, useUpdate, useDelete, usePagedList } from '../lib/hooks'
+import { StudentPicker } from '../components/StudentPicker'
 import { useAuth } from '../lib/auth'
 import { useToast } from '../lib/toast'
 import { Attendance, Student, Unit } from '../../shared/types'
@@ -10,7 +11,7 @@ export function KehadiranPage() {
   const { authed } = useAuth()
   const toast = useToast()
   const { data: rows, isLoading } = useList<Attendance>('attendance')
-  const { data: students } = useList<Student>('students')
+  const studentsHead = usePagedList<Student>('students', { page: 1, limit: 1 })
   const { data: units } = useList<Unit>('units')
   const create = useCreate<Attendance>('attendance')
   const update = useUpdate<Attendance>('attendance')
@@ -24,7 +25,7 @@ export function KehadiranPage() {
     () => (rows ?? []).filter((r) => !unitFilter || r.unit_id === unitFilter),
     [rows, unitFilter],
   )
-  const canAdd = (students?.length ?? 0) > 0 && (units?.length ?? 0) > 0
+  const canAdd = (studentsHead.data?.total ?? 0) > 0 && (units?.length ?? 0) > 0
 
   async function save(body: Partial<Attendance>) {
     try {
@@ -84,15 +85,14 @@ export function KehadiranPage() {
       </div>
 
       {showForm && (
-        <AttForm row={editing} students={students ?? []} units={units ?? []} onClose={() => setShowForm(false)} onSave={save} busy={create.isPending || update.isPending} />
+        <AttForm row={editing} units={units ?? []} onClose={() => setShowForm(false)} onSave={save} busy={create.isPending || update.isPending} />
       )}
     </>
   )
 }
 
-function AttForm({ row, students, units, onClose, onSave, busy }: {
+function AttForm({ row, units, onClose, onSave, busy }: {
   row: Attendance | null
-  students: Student[]
   units: Unit[]
   onClose: () => void
   onSave: (b: Partial<Attendance>) => void
@@ -120,10 +120,7 @@ function AttForm({ row, students, units, onClose, onSave, busy }: {
     >
       <div className="form-row">
         <Field label="Murid">
-          <select value={student_id} onChange={(e) => setStudent(e.target.value)}>
-            <option value="">Pilih…</option>
-            {students.map((s) => <option key={s.id} value={s.id}>{s.name} ({s.kelas})</option>)}
-          </select>
+          <StudentPicker value={student_id} onChange={(id) => setStudent(id)} />
         </Field>
         <Field label="Unit">
           <select value={unit_id} onChange={(e) => setUnit(e.target.value)}>

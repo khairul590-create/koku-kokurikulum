@@ -15,15 +15,28 @@ create table if not exists units (
 );
 create index if not exists idx_units_kind on units(kind);
 
+-- ── CLASSES (kelas) ──
+create table if not exists classes (
+  id          uuid primary key default gen_random_uuid(),
+  name        text not null unique,
+  tahun       int  not null default 1,
+  guru_kelas  text,
+  created_at  timestamptz not null default now()
+);
+
 -- ── STUDENTS (murid) ──
 create table if not exists students (
   id          uuid primary key default gen_random_uuid(),
   name        text not null,
-  kelas       text not null,
+  class_id    uuid references classes(id) on delete set null,
+  kelas       text not null default '',   -- cache nama kelas utk paparan
   tahun       int  not null default 4,
+  jantina     text check (jantina in ('L','P')),
   created_at  timestamptz not null default now()
 );
 create index if not exists idx_students_tahun on students(tahun);
+create index if not exists idx_students_class on students(class_id);
+create index if not exists idx_students_name on students(name);
 
 -- ── ENROLLMENTS (penyertaan murid dlm unit) ──
 create table if not exists enrollments (
@@ -111,6 +124,7 @@ insert into settings (id, data) values (1, '{"school":"SK Darau","session":"2026
 -- access. This makes the public anon key safe even if it leaks, and blocks any
 -- direct PostgREST access that bypasses the API auth layer.
 alter table units         enable row level security;
+alter table classes       enable row level security;
 alter table students      enable row level security;
 alter table enrollments   enable row level security;
 alter table attendance    enable row level security;

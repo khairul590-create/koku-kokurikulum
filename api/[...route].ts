@@ -96,10 +96,36 @@ const unitSchema = z.object({
   kind: z.enum(['kelab', 'beruniform', 'sukan']),
   advisor: optStr(120),
 })
+const classSchema = z.object({
+  name: str(80).min(1),
+  tahun: z.coerce.number().int().min(1).max(6),
+  guru_kelas: optStr(120),
+})
 const studentSchema = z.object({
   name: str(120).min(1),
-  kelas: str(40).min(1),
-  tahun: z.coerce.number().int().min(1).max(6),
+  class_id: z.string().uuid().optional().nullable(),
+  jantina: z.enum(['L', 'P']).optional().nullable(),
+})
+// Resolve class_id -> cache kelas name + tahun. Only touches those fields when
+// class_id is part of the write (so partial updates don't clobber them).
+async function studentTransform(b: Record<string, unknown>) {
+  if (!('class_id' in b)) return b
+  if (b.class_id) {
+    const { data: cls } = await db()
+      .from('classes')
+      .select('name,tahun')
+      .eq('id', b.class_id as string)
+      .single()
+    if (cls) return { ...b, kelas: cls.name, tahun: cls.tahun }
+    return b
+  }
+  return { ...b, kelas: '' }
+}
+const bulkRowSchema = z.object({
+  name: str(120).min(1),
+  kelas: str(80).min(1),
+  tahun: z.coerce.number().int().min(1).max(6).optional(),
+  jantina: z.enum(['L', 'P']).optional().nullable(),
 })
 const enrollmentSchema = z.object({
   student_id: z.string().uuid(),
@@ -143,7 +169,7 @@ const activitySchema = z.object({
   status: str(40).default('dirancang'),
 })
 
-const stuSel = 'id,name,kelas,tahun'
+const stuSel = 'id,name,kelas,tahun,jantina'
 const unitSel = 'id,name,kind,advisor'
 
 // ─────────────── RESOURCE ROUTES ───────────────
@@ -153,11 +179,82 @@ app.route('/units', crud({
   filters: ['kind'],
   order: { col: 'name' },
 }))
+app.route('/classes', crud({
+  table: 'classes',
+  schema: classSchema,
+  filters: ['tahun'],
+  order: { col: 'name' },
+}))
+
+// Bulk import — registered before the /students crud mount. Resolves/creates
+// classes by name, then inserts students in chunks.
+app.post('/students/bulk', async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as { rows?: unknown[] }
+  const rows = Array.isArray(body.rows) ? body.rows : []
+  if (!rows.length) return c.json({ error: 'Tiada baris untuk import.' }, 400)
+  if (rows.length > 2000)
+    return c.json({ error: 'Maksimum 2000 baris setiap import.' }, 400)
+
+  const sb = db()
+  const { data: existing } = await sb.from('classes').select('id,name,tahun')
+  const byName = new Map(
+    (existing ?? []).map((c2) => [c2.name.toLowerCase(), c2]),
+  )
+  const errors: { row: number; error: string }[] = []
+  const toInsert: Record<string, unknown>[] = []
+
+  for (let i = 0; i < rows.length; i++) {
+    const parsed = bulkRowSchema.safeParse(rows[i])
+    if (!parsed.success) {
+      errors.push({ row: i + 1, error: parsed.error.errors[0]?.message || 'tidak sah' })
+      continue
+    }
+    const { name, kelas, tahun, jantina } = parsed.data
+    let cls = byName.get(kelas.toLowerCase())
+    if (!cls) {
+      const { data: created, error } = await sb
+        .from('classes')
+        .insert({ name: kelas, tahun: tahun ?? 1 })
+        .select('id,name,tahun')
+        .single()
+      if (error || !created) {
+        errors.push({ row: i + 1, error: `gagal cipta kelas "${kelas}"` })
+        continue
+      }
+      cls = created
+      byName.set(kelas.toLowerCase(), cls)
+    }
+    toInsert.push({
+      name,
+      class_id: cls.id,
+      kelas: cls.name,
+      tahun: tahun ?? cls.tahun,
+      jantina: jantina ?? null,
+    })
+  }
+
+  let inserted = 0
+  for (let i = 0; i < toInsert.length; i += 500) {
+    const chunk = toInsert.slice(i, i + 500)
+    const { error } = await sb.from('students').insert(chunk)
+    if (error) errors.push({ row: 0, error: error.message })
+    else inserted += chunk.length
+  }
+  return c.json({
+    inserted,
+    skipped: rows.length - inserted,
+    errors: errors.slice(0, 50),
+  })
+})
+
 app.route('/students', crud({
   table: 'students',
   schema: studentSchema,
-  filters: ['tahun'],
+  select: 'id,name,class_id,kelas,tahun,jantina',
+  filters: ['class_id', 'tahun'],
+  searchCol: 'name',
   order: { col: 'name' },
+  transform: studentTransform,
 }))
 app.route('/enrollments', crud({
   table: 'enrollments',

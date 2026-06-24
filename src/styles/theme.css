@@ -322,6 +322,26 @@ a { color: inherit; }
 .btn-del { background: #ffebee; color: #c62828; }
 .btn-ghost { background: #ede7f6; color: #4527a0; }
 
+/* searchable student picker */
+.picker { position: relative; width: 100%; }
+.picker-input {
+  width: 100%; padding: 10px 12px; border-radius: 9px; border: 1px solid #ddd6f4;
+  font-size: 14px; font-family: inherit; background: #fff; color: var(--text);
+}
+.picker-list {
+  position: absolute; z-index: 50; top: calc(100% + 4px); left: 0; right: 0;
+  background: #fff; border: 1px solid #e3ddf6; border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(94, 53, 177, 0.18); max-height: 240px; overflow-y: auto;
+}
+.picker-item { padding: 9px 12px; font-size: 13px; cursor: pointer; border-bottom: 1px solid #f3f0fb; }
+.picker-item:last-child { border-bottom: none; }
+.picker-item:hover { background: #f6f4ff; }
+.picker-item .muted, .muted { color: var(--muted); }
+
+.pager { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+.pager-info { font-size: 12px; color: var(--muted); }
+.pager-btns { display: flex; gap: 8px; align-items: center; }
+
 .empty-state { text-align: center; padding: 36px 16px; color: var(--muted); }
 .empty-state .es-ic { font-size: 40px; }
 .empty-state .es-text { font-size: 12px; margin-top: 8px; }

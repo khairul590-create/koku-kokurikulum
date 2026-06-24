@@ -1,9 +1,11 @@
 import {
+  keepPreviousData,
   useMutation,
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
 import { api, qs } from './api'
+import { Paged } from '../../shared/types'
 
 // Generic list hook for a REST resource with optional query params.
 export function useList<T>(
@@ -13,6 +15,19 @@ export function useList<T>(
   return useQuery({
     queryKey: [resource, params],
     queryFn: () => api.get<T[]>(`/${resource}${qs(params)}`),
+  })
+}
+
+// Server-paged list (resource list endpoint returns { rows, total, page, limit }
+// when a `page` param is sent). Keeps previous page visible while loading.
+export function usePagedList<T>(
+  resource: string,
+  params: Record<string, string | number | undefined>,
+) {
+  return useQuery({
+    queryKey: [resource, 'paged', params],
+    queryFn: () => api.get<Paged<T>>(`/${resource}${qs(params)}`),
+    placeholderData: keepPreviousData,
   })
 }
 

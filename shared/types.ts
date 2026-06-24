@@ -39,12 +39,32 @@ export interface Unit {
   created_at: string
 }
 
+export interface Class {
+  id: string
+  name: string
+  tahun: number
+  guru_kelas: string | null
+  created_at: string
+}
+
+export type Jantina = 'L' | 'P'
+
 export interface Student {
   id: string
   name: string
-  kelas: string
+  class_id: string | null
+  kelas: string // cache nama kelas untuk paparan
   tahun: number
+  jantina: Jantina | null
   created_at: string
+  class?: Class
+}
+
+export interface Paged<T> {
+  rows: T[]
+  total: number
+  page: number
+  limit: number
 }
 
 export interface Enrollment {

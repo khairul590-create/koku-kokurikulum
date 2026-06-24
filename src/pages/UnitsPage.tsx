@@ -2,10 +2,11 @@ import { useState } from 'react'
 import { Modal } from '../components/Modal'
 import { Field, PageHeader, Loading, EmptyState, LevelBadge } from '../components/ui'
 import { useList, useCreate, useUpdate, useDelete } from '../lib/hooks'
+import { StudentPicker } from '../components/StudentPicker'
 import { useAuth } from '../lib/auth'
 import { useToast } from '../lib/toast'
 import {
-  Unit, UnitKind, UNIT_KIND_LABEL, Enrollment, Student, Level, LEVELS, LEVEL_LABEL,
+  Unit, UnitKind, UNIT_KIND_LABEL, Enrollment, Level, LEVELS, LEVEL_LABEL,
 } from '../../shared/types'
 
 const KIND_META: Record<UnitKind, { icon: string; head: string }> = {
@@ -143,7 +144,6 @@ function MembersModal({ unit, onClose }: { unit: Unit; onClose: () => void }) {
   const { authed } = useAuth()
   const toast = useToast()
   const { data: members } = useList<Enrollment>('enrollments', { unit_id: unit.id })
-  const { data: students } = useList<Student>('students')
   const create = useCreate<Enrollment>('enrollments')
   const update = useUpdate<Enrollment>('enrollments')
   const del = useDelete('enrollments')
@@ -151,9 +151,6 @@ function MembersModal({ unit, onClose }: { unit: Unit; onClose: () => void }) {
   const [sid, setSid] = useState('')
   const [role, setRole] = useState('')
   const [level, setLevel] = useState<Level>('sekolah')
-
-  const enrolledIds = new Set((members ?? []).map((m) => m.student_id))
-  const available = (students ?? []).filter((s) => !enrolledIds.has(s.id))
 
   async function add() {
     if (!sid) return
@@ -184,11 +181,10 @@ function MembersModal({ unit, onClose }: { unit: Unit; onClose: () => void }) {
   return (
     <Modal title={`👥 Ahli — ${unit.name}`} onClose={onClose}>
       {authed && (
-        <div className="section-filter" style={{ marginBottom: 14 }}>
-          <select className="filter-select" value={sid} onChange={(e) => setSid(e.target.value)}>
-            <option value="">Pilih murid…</option>
-            {available.map((s) => <option key={s.id} value={s.id}>{s.name} ({s.kelas})</option>)}
-          </select>
+        <div className="section-filter" style={{ marginBottom: 14, alignItems: 'flex-start' }}>
+          <div style={{ flex: 1, minWidth: 180 }}>
+            <StudentPicker value={sid} onChange={(id) => setSid(id)} placeholder="Cari murid untuk tambah…" />
+          </div>
           <input className="filter-input" placeholder="Jawatan (opsyenal)" value={role} onChange={(e) => setRole(e.target.value)} />
           <select className="filter-select" value={level} onChange={(e) => setLevel(e.target.value as Level)}>
             {LEVELS.map((l) => <option key={l} value={l}>{LEVEL_LABEL[l]}</option>)}
@@ -222,7 +218,6 @@ function MembersModal({ unit, onClose }: { unit: Unit; onClose: () => void }) {
           </table>
         </div>
       )}
-      {!students?.length && <p className="page-sub" style={{ marginTop: 10 }}>Belum ada murid. Tambah murid di tab Urus Murid dahulu.</p>}
     </Modal>
   )
 }

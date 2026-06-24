@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Modal } from '../components/Modal'
 import { Field, PageHeader, Loading, EmptyState, GradeBadge } from '../components/ui'
-import { useList, useCreate, useUpdate, useDelete } from '../lib/hooks'
+import { useList, useCreate, useUpdate, useDelete, usePagedList } from '../lib/hooks'
+import { StudentPicker } from '../components/StudentPicker'
 import { useAuth } from '../lib/auth'
 import { useToast } from '../lib/toast'
 import { PajskScore, Student, Unit, gradeFromTotal } from '../../shared/types'
@@ -10,7 +11,7 @@ export function PajskPage() {
   const { authed } = useAuth()
   const toast = useToast()
   const { data: scores, isLoading } = useList<PajskScore>('pajsk-scores')
-  const { data: students } = useList<Student>('students')
+  const studentsHead = usePagedList<Student>('students', { page: 1, limit: 1 })
   const { data: units } = useList<Unit>('units')
   const create = useCreate<PajskScore>('pajsk-scores')
   const update = useUpdate<PajskScore>('pajsk-scores')
@@ -35,7 +36,7 @@ export function PajskPage() {
     catch (e) { toast((e as Error).message, 'err') }
   }
 
-  const canAdd = (students?.length ?? 0) > 0 && (units?.length ?? 0) > 0
+  const canAdd = (studentsHead.data?.total ?? 0) > 0 && (units?.length ?? 0) > 0
 
   return (
     <>
@@ -76,15 +77,14 @@ export function PajskPage() {
       </div>
 
       {showForm && (
-        <PajskForm score={editing} students={students ?? []} units={units ?? []} onClose={() => setShowForm(false)} onSave={save} busy={create.isPending || update.isPending} />
+        <PajskForm score={editing} units={units ?? []} onClose={() => setShowForm(false)} onSave={save} busy={create.isPending || update.isPending} />
       )}
     </>
   )
 }
 
-function PajskForm({ score, students, units, onClose, onSave, busy }: {
+function PajskForm({ score, units, onClose, onSave, busy }: {
   score: PajskScore | null
-  students: Student[]
   units: Unit[]
   onClose: () => void
   onSave: (b: Partial<PajskScore>) => void
@@ -119,10 +119,7 @@ function PajskForm({ score, students, units, onClose, onSave, busy }: {
     >
       <div className="form-row">
         <Field label="Murid">
-          <select value={f.student_id} onChange={(e) => set('student_id', e.target.value)}>
-            <option value="">Pilih…</option>
-            {students.map((s) => <option key={s.id} value={s.id}>{s.name} ({s.kelas})</option>)}
-          </select>
+          <StudentPicker value={f.student_id} onChange={(id) => set('student_id', id)} />
         </Field>
         <Field label="Unit">
           <select value={f.unit_id} onChange={(e) => set('unit_id', e.target.value)}>

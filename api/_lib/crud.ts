@@ -9,28 +9,58 @@ export interface CrudOpts {
   select?: string // supabase select string (supports joins)
   order?: { col: string; asc?: boolean }
   filters?: string[] // query params usable as eq() filters
+  searchCol?: string // column for case-insensitive ?q= search
   // Optional server-side transform (e.g. derive total/grade) after validation.
-  transform?: (body: Record<string, unknown>) => Record<string, unknown>
+  // May be async (e.g. resolve a related row before writing).
+  transform?: (
+    body: Record<string, unknown>,
+  ) => Record<string, unknown> | Promise<Record<string, unknown>>
 }
+
+const MAX_ROWS = 1000 // safety cap for un-paged lists
+const DEFAULT_LIMIT = 25
+const MAX_LIMIT = 200
 
 export function crud(opts: CrudOpts) {
   const r = new Hono()
   const select = opts.select ?? '*'
 
-  const prep = (body: Record<string, unknown>) =>
-    opts.transform ? opts.transform(body) : body
+  const prep = async (body: Record<string, unknown>) =>
+    opts.transform ? await opts.transform(body) : body
 
-  // LIST
+  // LIST — supports eq filters, ?q= search, and ?page= pagination.
+  // With ?page → returns { rows, total, page, limit }; otherwise an array.
   r.get('/', async (c) => {
-    let q = db().from(opts.table).select(select)
+    const paged = c.req.query('page') !== undefined
+    const page = Math.max(1, parseInt(c.req.query('page') || '1', 10) || 1)
+    const limit = Math.min(
+      MAX_LIMIT,
+      Math.max(1, parseInt(c.req.query('limit') || String(DEFAULT_LIMIT), 10) || DEFAULT_LIMIT),
+    )
+
+    let q = paged
+      ? db().from(opts.table).select(select, { count: 'exact' })
+      : db().from(opts.table).select(select)
+
     for (const f of opts.filters ?? []) {
       const v = c.req.query(f)
       if (v) q = q.eq(f, v)
     }
+    const search = c.req.query('q')
+    if (search && opts.searchCol) q = q.ilike(opts.searchCol, `%${search}%`)
     if (opts.order)
       q = q.order(opts.order.col, { ascending: opts.order.asc ?? true })
-    const { data, error } = await q
+
+    if (paged) {
+      const from = (page - 1) * limit
+      q = q.range(from, from + limit - 1)
+    } else {
+      q = q.limit(MAX_ROWS)
+    }
+
+    const { data, error, count } = await q
     if (error) return c.json({ error: error.message }, 500)
+    if (paged) return c.json({ rows: data, total: count ?? 0, page, limit })
     return c.json(data)
   })
 
@@ -52,7 +82,7 @@ export function crud(opts: CrudOpts) {
       return c.json({ error: zerr(parsed.error) }, 400)
     const { data, error } = await db()
       .from(opts.table)
-      .insert(prep(parsed.data))
+      .insert(await prep(parsed.data))
       .select(select)
       .single()
     if (error) return c.json({ error: pgError(error) }, 400)
@@ -74,7 +104,7 @@ export function crud(opts: CrudOpts) {
     }
     const { data, error } = await db()
       .from(opts.table)
-      .update(prep(body))
+      .update(await prep(body))
       .eq('id', c.req.param('id'))
       .select(select)
       .single()
