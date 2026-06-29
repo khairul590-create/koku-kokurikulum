@@ -5,6 +5,7 @@ import { Layout } from './layout/Layout'
 import { Dashboard } from './pages/Dashboard'
 import { UnitsPage } from './pages/UnitsPage'
 import { StudentsInfo } from './pages/StudentsInfo'
+import { StudentProfile } from './pages/StudentProfile'
 import { PajskPage } from './pages/PajskPage'
 import { KehadiranPage } from './pages/KehadiranPage'
 import { PencapaianPage } from './pages/PencapaianPage'
@@ -31,6 +32,7 @@ export default function App() {
         <Route path="beruniform" element={<UnitsPage kind="beruniform" />} />
         <Route path="sukan" element={<UnitsPage kind="sukan" />} />
         <Route path="murid" element={<StudentsInfo />} />
+        <Route path="murid/:id" element={<StudentProfile />} />
         <Route path="pajsk" element={<PajskPage />} />
         <Route path="kehadiran" element={<KehadiranPage />} />
         <Route path="pencapaian" element={<PencapaianPage />} />

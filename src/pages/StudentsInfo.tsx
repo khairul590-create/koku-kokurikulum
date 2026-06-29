@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Modal } from '../components/Modal'
 import { Field, PageHeader, Loading, EmptyState } from '../components/ui'
 import { ImportStudents } from '../components/ImportStudents'
@@ -118,7 +119,7 @@ function MuridTab({ authed }: { authed: boolean }) {
                     {rows.map((s, i) => (
                       <tr key={s.id}>
                         <td>{(page - 1) * PAGE_SIZE + i + 1}</td>
-                        <td><b>{s.name}</b></td>
+                        <td><Link to={`/murid/${s.id}`} className="link-name">{s.name}</Link></td>
                         <td>{s.kelas || '—'}</td>
                         <td>{s.tahun}</td>
                         <td>{s.jantina ? <span className={`badge ${s.jantina === 'L' ? 'b-blue' : 'b-red'}`}>{s.jantina}</span> : '—'}</td>
