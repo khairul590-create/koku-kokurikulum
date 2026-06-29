@@ -1,16 +1,17 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Modal } from '../components/Modal'
-import { Field, PageHeader, Loading, EmptyState } from '../components/ui'
+import { Field, PageHeader, Loading, EmptyState, Pager } from '../components/ui'
 import { useList, useCreate, useUpdate, useDelete, usePagedList } from '../lib/hooks'
 import { StudentPicker } from '../components/StudentPicker'
 import { useAuth } from '../lib/auth'
 import { useToast } from '../lib/toast'
 import { Attendance, Student, Unit } from '../../shared/types'
 
+const PAGE_SIZE = 25
+
 export function KehadiranPage() {
   const { authed } = useAuth()
   const toast = useToast()
-  const { data: rows, isLoading } = useList<Attendance>('attendance')
   const studentsHead = usePagedList<Student>('students', { page: 1, limit: 1 })
   const { data: units } = useList<Unit>('units')
   const create = useCreate<Attendance>('attendance')
@@ -20,11 +21,18 @@ export function KehadiranPage() {
   const [editing, setEditing] = useState<Attendance | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [unitFilter, setUnitFilter] = useState('')
+  const [sessionFilter, setSessionFilter] = useState('')
+  const [page, setPage] = useState(1)
+  useEffect(() => setPage(1), [unitFilter, sessionFilter])
 
-  const filtered = useMemo(
-    () => (rows ?? []).filter((r) => !unitFilter || r.unit_id === unitFilter),
-    [rows, unitFilter],
-  )
+  const { data, isLoading, isFetching } = usePagedList<Attendance>('attendance', {
+    page,
+    limit: PAGE_SIZE,
+    unit_id: unitFilter || undefined,
+    session: sessionFilter || undefined,
+  })
+  const rows = data?.rows ?? []
+  const total = data?.total ?? 0
   const canAdd = (studentsHead.data?.total ?? 0) > 0 && (units?.length ?? 0) > 0
 
   async function save(body: Partial<Attendance>) {
@@ -56,30 +64,34 @@ export function KehadiranPage() {
               <option value="">Semua Unit</option>
               {(units ?? []).map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
             </select>
+            <input className="filter-input" placeholder="Sesi (cth 2026)" value={sessionFilter} onChange={(e) => setSessionFilter(e.target.value)} style={{ width: 140 }} />
           </div>
-          {isLoading ? <Loading /> : !filtered.length ? (
+          {isLoading ? <Loading /> : total === 0 ? (
             <EmptyState icon="📅" text={canAdd ? 'Tiada rekod kehadiran.' : 'Tambah murid & unit dahulu.'} />
           ) : (
-            <div className="table-wrap">
-              <table className="data-table">
-                <thead><tr><th>Murid</th><th>Unit</th><th>Minggu</th><th>Sesi</th><th>Status</th>{authed && <th></th>}</tr></thead>
-                <tbody>
-                  {filtered.map((r) => (
-                    <tr key={r.id}>
-                      <td><b>{r.student?.name ?? '—'}</b></td>
-                      <td>{r.unit?.name ?? '—'}</td>
-                      <td>M{r.week}</td>
-                      <td>{r.session}</td>
-                      <td><span className={`badge ${r.present ? 'b-green' : 'b-red'}`}>{r.present ? 'Hadir' : 'Tidak Hadir'}</span></td>
-                      {authed && <td><div className="row-actions">
-                        <button className="btn btn-sm btn-edit" onClick={() => { setEditing(r); setShowForm(true) }}>Edit</button>
-                        <button className="btn btn-sm btn-del" onClick={() => remove(r)}>Padam</button>
-                      </div></td>}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <>
+              <div className="table-wrap" style={{ opacity: isFetching ? 0.6 : 1 }}>
+                <table className="data-table">
+                  <thead><tr><th>Murid</th><th>Unit</th><th>Minggu</th><th>Sesi</th><th>Status</th>{authed && <th></th>}</tr></thead>
+                  <tbody>
+                    {rows.map((r) => (
+                      <tr key={r.id}>
+                        <td><b>{r.student?.name ?? '—'}</b></td>
+                        <td>{r.unit?.name ?? '—'}</td>
+                        <td>M{r.week}</td>
+                        <td>{r.session}</td>
+                        <td><span className={`badge ${r.present ? 'b-green' : 'b-red'}`}>{r.present ? 'Hadir' : 'Tidak Hadir'}</span></td>
+                        {authed && <td><div className="row-actions">
+                          <button className="btn btn-sm btn-edit" onClick={() => { setEditing(r); setShowForm(true) }}>Edit</button>
+                          <button className="btn btn-sm btn-del" onClick={() => remove(r)}>Padam</button>
+                        </div></td>}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <Pager page={page} total={total} pageSize={PAGE_SIZE} onPage={setPage} label="rekod" />
+            </>
           )}
         </div>
       </div>

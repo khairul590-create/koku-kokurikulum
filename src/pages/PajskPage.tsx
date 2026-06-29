@@ -1,16 +1,17 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Modal } from '../components/Modal'
-import { Field, PageHeader, Loading, EmptyState, GradeBadge } from '../components/ui'
+import { Field, PageHeader, Loading, EmptyState, GradeBadge, Pager } from '../components/ui'
 import { useList, useCreate, useUpdate, useDelete, usePagedList } from '../lib/hooks'
 import { StudentPicker } from '../components/StudentPicker'
 import { useAuth } from '../lib/auth'
 import { useToast } from '../lib/toast'
 import { PajskScore, Student, Unit, gradeFromTotal } from '../../shared/types'
 
+const PAGE_SIZE = 25
+
 export function PajskPage() {
   const { authed } = useAuth()
   const toast = useToast()
-  const { data: scores, isLoading } = useList<PajskScore>('pajsk-scores')
   const studentsHead = usePagedList<Student>('students', { page: 1, limit: 1 })
   const { data: units } = useList<Unit>('units')
   const create = useCreate<PajskScore>('pajsk-scores')
@@ -19,6 +20,19 @@ export function PajskPage() {
 
   const [editing, setEditing] = useState<PajskScore | null>(null)
   const [showForm, setShowForm] = useState(false)
+  const [unitFilter, setUnitFilter] = useState('')
+  const [sessionFilter, setSessionFilter] = useState('')
+  const [page, setPage] = useState(1)
+  useEffect(() => setPage(1), [unitFilter, sessionFilter])
+
+  const { data, isLoading, isFetching } = usePagedList<PajskScore>('pajsk-scores', {
+    page,
+    limit: PAGE_SIZE,
+    unit_id: unitFilter || undefined,
+    session: sessionFilter || undefined,
+  })
+  const scores = data?.rows ?? []
+  const total = data?.total ?? 0
 
   async function save(body: Partial<PajskScore>) {
     try {
@@ -48,30 +62,40 @@ export function PajskPage() {
       <div className="panel">
         <div className="panel-head ph-indigo"><span className="ph-icon">📋</span> Rekod Markah PAJSK</div>
         <div className="panel-body" style={{ padding: '8px 12px' }}>
-          {isLoading ? <Loading /> : !scores?.length ? (
+          <div className="section-filter">
+            <select className="filter-select" value={unitFilter} onChange={(e) => setUnitFilter(e.target.value)}>
+              <option value="">Semua Unit</option>
+              {(units ?? []).map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+            </select>
+            <input className="filter-input" placeholder="Sesi (cth 2026)" value={sessionFilter} onChange={(e) => setSessionFilter(e.target.value)} style={{ width: 140 }} />
+          </div>
+          {isLoading ? <Loading /> : total === 0 ? (
             <EmptyState icon="📋" text={canAdd ? 'Tiada markah. Klik Masuk Markah.' : 'Tambah murid & unit dahulu.'} />
           ) : (
-            <div className="table-wrap">
-              <table className="data-table">
-                <thead><tr><th>Murid</th><th>Unit</th><th>Sesi</th><th>Hadir</th><th>Jawatan</th><th>Libat</th><th>Capai</th><th>Total</th><th>Gred</th>{authed && <th></th>}</tr></thead>
-                <tbody>
-                  {scores.map((s) => (
-                    <tr key={s.id}>
-                      <td><b>{s.student?.name ?? '—'}</b></td>
-                      <td>{s.unit?.name ?? '—'}</td>
-                      <td>{s.session}</td>
-                      <td>{s.m_kehadiran}</td><td>{s.m_jawatan}</td><td>{s.m_penglibatan}</td><td>{s.m_pencapaian}</td>
-                      <td><b>{s.total}</b></td>
-                      <td><GradeBadge grade={s.grade} /></td>
-                      {authed && <td><div className="row-actions">
-                        <button className="btn btn-sm btn-edit" onClick={() => { setEditing(s); setShowForm(true) }}>Edit</button>
-                        <button className="btn btn-sm btn-del" onClick={() => remove(s)}>Padam</button>
-                      </div></td>}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <>
+              <div className="table-wrap" style={{ opacity: isFetching ? 0.6 : 1 }}>
+                <table className="data-table">
+                  <thead><tr><th>Murid</th><th>Unit</th><th>Sesi</th><th>Hadir</th><th>Jawatan</th><th>Libat</th><th>Capai</th><th>Total</th><th>Gred</th>{authed && <th></th>}</tr></thead>
+                  <tbody>
+                    {scores.map((s) => (
+                      <tr key={s.id}>
+                        <td><b>{s.student?.name ?? '—'}</b></td>
+                        <td>{s.unit?.name ?? '—'}</td>
+                        <td>{s.session}</td>
+                        <td>{s.m_kehadiran}</td><td>{s.m_jawatan}</td><td>{s.m_penglibatan}</td><td>{s.m_pencapaian}</td>
+                        <td><b>{s.total}</b></td>
+                        <td><GradeBadge grade={s.grade} /></td>
+                        {authed && <td><div className="row-actions">
+                          <button className="btn btn-sm btn-edit" onClick={() => { setEditing(s); setShowForm(true) }}>Edit</button>
+                          <button className="btn btn-sm btn-del" onClick={() => remove(s)}>Padam</button>
+                        </div></td>}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <Pager page={page} total={total} pageSize={PAGE_SIZE} onPage={setPage} label="markah" />
+            </>
           )}
         </div>
       </div>

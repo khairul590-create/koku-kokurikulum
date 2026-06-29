@@ -62,6 +62,33 @@ export function Field({
   )
 }
 
+export function Pager({
+  page,
+  total,
+  pageSize,
+  onPage,
+  label = 'rekod',
+}: {
+  page: number
+  total: number
+  pageSize: number
+  onPage: (p: number) => void
+  label?: string
+}) {
+  const lastPage = Math.max(1, Math.ceil(total / pageSize))
+  return (
+    <div className="pager">
+      <div className="pager-info">
+        {total} {label} · halaman {page}/{lastPage}
+      </div>
+      <div className="pager-btns">
+        <button className="btn btn-sm btn-ghost" disabled={page <= 1} onClick={() => onPage(page - 1)}>← Sebelum</button>
+        <button className="btn btn-sm btn-ghost" disabled={page >= lastPage} onClick={() => onPage(page + 1)}>Seterus →</button>
+      </div>
+    </div>
+  )
+}
+
 export function LevelBadge({ level }: { level: string }) {
   const map: Record<string, string> = {
     sekolah: 'b-grey',
