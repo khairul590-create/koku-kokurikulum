@@ -1,6 +1,7 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { api } from '../lib/api'
-import { useList } from '../lib/hooks'
+import { api, fetchAll } from '../lib/api'
+import { usePagedList } from '../lib/hooks'
 import { PageHeader } from '../components/ui'
 import { useToast } from '../lib/toast'
 import { exportExcel, exportPdf } from '../lib/export'
@@ -11,48 +12,74 @@ import {
 export function MuatTurun() {
   const toast = useToast()
   const { data: stats } = useQuery({ queryKey: ['stats'], queryFn: () => api.get<DashboardStats>('/stats') })
-  const students = useList<Student>('students').data ?? []
-  const units = useList<Unit>('units').data ?? []
-  const enroll = useList<Enrollment>('enrollments').data ?? []
-  const scores = useList<PajskScore>('pajsk-scores').data ?? []
-  const att = useList<Attendance>('attendance').data ?? []
-  const ach = useList<Achievement>('achievements').data ?? []
-  const acts = useList<Activity>('activities').data ?? []
+  const [busy, setBusy] = useState<string | null>(null)
 
-  function fullExcel() {
-    exportExcel('Kokurikulum_SK_Darau', [
-      { name: 'Murid', rows: students.map((s) => ({ Nama: s.name, Kelas: s.kelas, Tahun: s.tahun })) },
-      { name: 'Unit', rows: units.map((u) => ({ Nama: u.name, Jenis: u.kind, Penasihat: u.advisor })) },
-      { name: 'Penyertaan', rows: enroll.map((e) => ({ Murid: e.student?.name, Unit: e.unit?.name, Jawatan: e.role, Peringkat: e.highest_level })) },
-      { name: 'Markah', rows: scores.map((s) => ({ Murid: s.student?.name, Unit: s.unit?.name, Sesi: s.session, Total: s.total, Gred: s.grade })) },
-      { name: 'Kehadiran', rows: att.map((a) => ({ Murid: a.student?.name, Unit: a.unit?.name, Minggu: a.week, Hadir: a.present ? 'Ya' : 'Tidak' })) },
-      { name: 'Pencapaian', rows: ach.map((a) => ({ Tajuk: a.title, Murid: a.student?.name, Unit: a.unit?.name, Peringkat: a.level, Kedudukan: a.position, Tarikh: a.date })) },
-      { name: 'Takwim', rows: acts.map((a) => ({ Aktiviti: a.title, Tarikh: a.date, Unit: a.unit?.name, Status: a.status })) },
-    ])
-    toast('Excel dimuat turun', 'ok')
+  // accurate totals via cheap paged head (limit 1 -> total)
+  const head = (r: string) => usePagedList(r, { page: 1, limit: 1 }).data?.total ?? 0
+  const counts = {
+    Murid: head('students'),
+    Unit: head('units'),
+    Markah: head('pajsk-scores'),
+    Kehadiran: head('attendance'),
+    Pencapaian: head('achievements'),
+    Aktiviti: head('activities'),
+  }
+
+  async function fullExcel() {
+    setBusy('excel')
+    try {
+      const [students, units, enroll, scores, att, ach, acts] = await Promise.all([
+        fetchAll<Student>('students'),
+        fetchAll<Unit>('units'),
+        fetchAll<Enrollment>('enrollments'),
+        fetchAll<PajskScore>('pajsk-scores'),
+        fetchAll<Attendance>('attendance'),
+        fetchAll<Achievement>('achievements'),
+        fetchAll<Activity>('activities'),
+      ])
+      exportExcel('Kokurikulum_SK_Darau', [
+        { name: 'Murid', rows: students.map((s) => ({ Nama: s.name, Kelas: s.kelas, Tahun: s.tahun, Jantina: s.jantina ?? '' })) },
+        { name: 'Unit', rows: units.map((u) => ({ Nama: u.name, Jenis: u.kind, Penasihat: u.advisor })) },
+        { name: 'Penyertaan', rows: enroll.map((e) => ({ Murid: e.student?.name, Unit: e.unit?.name, Jawatan: e.role, Peringkat: e.highest_level })) },
+        { name: 'Markah', rows: scores.map((s) => ({ Murid: s.student?.name, Unit: s.unit?.name, Sesi: s.session, Total: s.total, Gred: s.grade })) },
+        { name: 'Kehadiran', rows: att.map((a) => ({ Murid: a.student?.name, Unit: a.unit?.name, Minggu: a.week, Sesi: a.session, Hadir: a.present ? 'Ya' : 'Tidak' })) },
+        { name: 'Pencapaian', rows: ach.map((a) => ({ Tajuk: a.title, Murid: a.student?.name, Unit: a.unit?.name, Peringkat: a.level, Kedudukan: a.position, Tarikh: a.date })) },
+        { name: 'Takwim', rows: acts.map((a) => ({ Aktiviti: a.title, Tarikh: a.date, Unit: a.unit?.name, Status: a.status })) },
+      ])
+      toast(`Excel dimuat turun (${students.length} murid)`, 'ok')
+    } catch (e) {
+      toast((e as Error).message, 'err')
+    } finally {
+      setBusy(null)
+    }
   }
 
   function summaryPdf() {
     if (!stats) return
-    exportPdf('Laporan Ringkasan Kokurikulum', [
-      { heading: 'Statistik Utama', head: ['Metrik', 'Nilai'], body: [
-        ['Jumlah Murid', stats.totalStudents],
-        ['Unit Kokurikulum', stats.totalUnits],
-        ['% Penyertaan', `${stats.participationPct}%`],
-        ['Purata PAJSK', stats.avgPajsk],
-        ['Jumlah Pencapaian', stats.totalAchievements],
-        ['% Kehadiran', `${stats.attendancePct}%`],
-      ] },
-      { heading: 'Prestasi Unit', head: ['Unit', 'Purata'], body: stats.unitAverages.map((u) => [u.name, u.avg]) },
-      { heading: 'Top Murid', head: ['Nama', 'Kelas', 'Purata', 'Gred'], body: stats.topStudents.map((s) => [s.name, s.kelas, s.total, s.grade]) },
-    ], 'Ringkasan_Kokurikulum')
-    toast('PDF dimuat turun', 'ok')
+    setBusy('pdf')
+    try {
+      exportPdf('Laporan Ringkasan Kokurikulum', [
+        { heading: 'Statistik Utama', head: ['Metrik', 'Nilai'], body: [
+          ['Jumlah Murid', stats.totalStudents],
+          ['Unit Kokurikulum', stats.totalUnits],
+          ['% Penyertaan', `${stats.participationPct}%`],
+          ['Purata PAJSK', stats.avgPajsk],
+          ['Jumlah Pencapaian', stats.totalAchievements],
+          ['% Kehadiran', `${stats.attendancePct}%`],
+        ] },
+        { heading: 'Prestasi Unit', head: ['Unit', 'Purata'], body: stats.unitAverages.map((u) => [u.name, u.avg]) },
+        { heading: 'Top Murid', head: ['Nama', 'Kelas', 'Purata', 'Gred'], body: stats.topStudents.map((s) => [s.name, s.kelas, s.total, s.grade]) },
+      ], 'Ringkasan_Kokurikulum')
+      toast('PDF dimuat turun', 'ok')
+    } finally {
+      setBusy(null)
+    }
   }
 
   const cards = [
-    { icon: '📊', title: 'Eksport Penuh (Excel)', sub: 'Semua data — 7 helaian', cls: 'btn-excel', fn: fullExcel },
-    { icon: '📄', title: 'Laporan Ringkasan (PDF)', sub: 'Statistik & prestasi', cls: 'btn-pdf', fn: summaryPdf },
-    { icon: '🖨️', title: 'Cetak Halaman', sub: 'Cetak paparan semasa', cls: 'btn-print', fn: () => window.print() },
+    { key: 'excel', icon: '📊', title: 'Eksport Penuh (Excel)', sub: 'Semua data — 7 helaian (lengkap, tiada had)', cls: 'btn-excel', fn: fullExcel },
+    { key: 'pdf', icon: '📄', title: 'Laporan Ringkasan (PDF)', sub: 'Statistik & prestasi', cls: 'btn-pdf', fn: summaryPdf },
+    { key: 'print', icon: '🖨️', title: 'Cetak Halaman', sub: 'Cetak paparan semasa', cls: 'btn-print', fn: () => window.print() },
   ]
 
   return (
@@ -60,13 +87,15 @@ export function MuatTurun() {
       <PageHeader title="📥 Muat Turun & Eksport" sub="Jana laporan PDF / Excel untuk fail dan pentadbiran" />
       <div className="komp-row">
         {cards.map((c) => (
-          <div className="komp-card" key={c.title} style={{ cursor: 'pointer' }} onClick={c.fn}>
+          <div className="komp-card" key={c.title}>
             <div className="k-ic">{c.icon}</div>
             <div style={{ flex: 1 }}>
               <div className="k-name">{c.title}</div>
               <div className="k-sub">{c.sub}</div>
             </div>
-            <button className={`act-btn ${c.cls}`} onClick={(e) => { e.stopPropagation(); c.fn() }}>Muat Turun</button>
+            <button className={`act-btn ${c.cls}`} disabled={busy === c.key} onClick={c.fn}>
+              {busy === c.key ? 'Memproses…' : 'Muat Turun'}
+            </button>
           </div>
         ))}
       </div>
@@ -74,12 +103,9 @@ export function MuatTurun() {
         <div className="panel-head ph-indigo"><span className="ph-icon">📦</span> Ringkasan Data Semasa</div>
         <div className="panel-body">
           <div className="kpi-strip" style={{ marginBottom: 0 }}>
-            <div className="kpi"><div className="kpi-val">{students.length}</div><div className="kpi-lab">Murid</div></div>
-            <div className="kpi"><div className="kpi-val">{units.length}</div><div className="kpi-lab">Unit</div></div>
-            <div className="kpi"><div className="kpi-val">{scores.length}</div><div className="kpi-lab">Markah</div></div>
-            <div className="kpi"><div className="kpi-val">{att.length}</div><div className="kpi-lab">Kehadiran</div></div>
-            <div className="kpi"><div className="kpi-val">{ach.length}</div><div className="kpi-lab">Pencapaian</div></div>
-            <div className="kpi"><div className="kpi-val">{acts.length}</div><div className="kpi-lab">Aktiviti</div></div>
+            {Object.entries(counts).map(([k, v]) => (
+              <div className="kpi" key={k}><div className="kpi-val">{v}</div><div className="kpi-lab">{k}</div></div>
+            ))}
           </div>
         </div>
       </div>

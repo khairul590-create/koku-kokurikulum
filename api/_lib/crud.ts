@@ -19,7 +19,7 @@ export interface CrudOpts {
 
 const MAX_ROWS = 1000 // safety cap for un-paged lists
 const DEFAULT_LIMIT = 25
-const MAX_LIMIT = 200
+const MAX_LIMIT = 1000 // allows full-export paging to fetch in 1000-row chunks
 
 export function crud(opts: CrudOpts) {
   const r = new Hono()

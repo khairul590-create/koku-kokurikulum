@@ -35,6 +35,24 @@ export const api = {
   del: <T>(p: string) => request<T>('DELETE', p),
 }
 
+// Fetch ALL rows of a paged resource by looping pages (for full exports).
+// Avoids the un-paged 1000-row cap.
+export async function fetchAll<T>(
+  resource: string,
+  params: Record<string, string | number | undefined> = {},
+): Promise<T[]> {
+  const limit = 1000
+  const all: T[] = []
+  for (let page = 1; page <= 1000; page++) {
+    const r = await api.get<{ rows: T[]; total: number }>(
+      `/${resource}${qs({ ...params, page, limit })}`,
+    )
+    all.push(...r.rows)
+    if (r.rows.length === 0 || all.length >= r.total) break
+  }
+  return all
+}
+
 // Build a querystring from a record, skipping empty values.
 export function qs(params: Record<string, string | number | undefined>): string {
   const u = new URLSearchParams()
