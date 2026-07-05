@@ -134,29 +134,6 @@ export function Dashboard() {
               </div>
             </div>
           </div>
-
-          <div className="panel">
-            <div className="panel-head ph-purple">
-              <span className="ph-icon">🏅</span> PRESTASI UNIT TERBAIK
-            </div>
-            <div className="panel-body" style={{ padding: '8px 12px' }}>
-              <table className="data-table">
-                <thead><tr><th>#</th><th>Unit</th><th>Purata</th></tr></thead>
-                <tbody>
-                  {topUnits.slice(0, 5).map((u, i) => (
-                    <tr key={u.name}>
-                      <td>{i + 1}</td>
-                      <td>{u.name}</td>
-                      <td><b>{u.avg}</b></td>
-                    </tr>
-                  ))}
-                  {topUnits.length === 0 && (
-                    <tr><td colSpan={3} style={{ textAlign: 'center', color: '#999' }}>Tiada data</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
         </div>
       </div>
 
