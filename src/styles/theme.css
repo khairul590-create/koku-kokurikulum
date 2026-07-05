@@ -138,6 +138,13 @@ a { color: inherit; }
 }
 @media (max-width: 560px) { .session-chip { display: none; } }
 
+.topbar-search {
+  background: #fff; padding: 10px 20px;
+  border-bottom: 1px solid #e3ddf6; position: relative; z-index: 60;
+}
+.topbar-search .picker { max-width: 560px; }
+.topbar-search .picker-input { font-size: 15px; padding: 11px 14px; }
+
 .content { padding: 16px 20px; flex: 1; background: #f3f1ff; }
 .page-title { font-size: 20px; font-weight: 800; color: #311b92; margin-bottom: 2px; }
 .page-sub { font-size: 12.5px; color: var(--muted); margin-bottom: 14px; }
@@ -485,7 +492,9 @@ a { color: inherit; }
   .page-title { font-size: 22px; }
   /* prevent iOS zoom on focus by keeping inputs >=16px */
   .form-field input, .form-field select, .form-field textarea,
-  .filter-select, .filter-input { font-size: 16px; }
+  .filter-select, .filter-input, .picker-input,
+  .topbar-search .picker-input { font-size: 16px; }
+  .topbar-search .picker { max-width: 100%; }
   .modal { max-width: 100%; }
   .form-row { flex-direction: column; gap: 0; }
   .action-bar { justify-content: stretch; }

@@ -1,23 +1,21 @@
 import { useState } from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { useSettings } from '../lib/settings'
 import { LoginModal } from './LoginModal'
+import { StudentPicker } from '../components/StudentPicker'
 
 const NAV = [
   { section: 'Dashboard' },
   { to: '/', icon: '📊', label: 'Dashboard', end: true },
   { section: 'Pengurusan Kokurikulum' },
   { to: '/murid', icon: '🧑‍🎓', label: 'Urus Murid' },
-  { to: '/kelab', icon: '🎨', label: 'Kelab & Persatuan' },
-  { to: '/beruniform', icon: '🎖️', label: 'Pasukan Beruniform' },
-  { to: '/sukan', icon: '⚽', label: 'Sukan & Permainan' },
+  { to: '/unit', icon: '🎯', label: 'Unit Kokurikulum' },
   { to: '/pajsk', icon: '📋', label: 'Pentaksiran PAJSK' },
   { to: '/kehadiran', icon: '📅', label: 'Rekod Kehadiran' },
   { to: '/pencapaian', icon: '🏆', label: 'Pencapaian & Anugerah' },
   { to: '/takwim', icon: '🗓️', label: 'Takwim Aktiviti' },
   { section: 'Laporan' },
-  { to: '/laporan/individu', icon: '👤', label: 'Laporan Individu' },
   { to: '/laporan/unit', icon: '🏫', label: 'Laporan Unit' },
   { to: '/muat-turun', icon: '📥', label: 'Muat Turun' },
   { section: 'Sistem' },
@@ -29,6 +27,7 @@ const NAV = [
 export function Layout() {
   const { authed, logout } = useAuth()
   const { settings } = useSettings()
+  const nav = useNavigate()
   const [showLogin, setShowLogin] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
 
@@ -142,6 +141,14 @@ export function Layout() {
               </button>
             )}
           </div>
+        </div>
+
+        <div className="topbar-search">
+          <StudentPicker
+            value=""
+            onChange={(id) => id && nav(`/murid/${id}`)}
+            placeholder="🔍 Cari murid — taip nama, terus buka profil"
+          />
         </div>
 
         <div className="content">

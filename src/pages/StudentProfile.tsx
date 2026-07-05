@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../lib/api'
 import { Loading, LevelBadge, GradeBadge } from '../components/ui'
-import { exportPdf } from '../lib/export'
+import { exportPdf, exportExcel } from '../lib/export'
 import {
   Student,
   Enrollment,
@@ -51,6 +51,19 @@ export function StudentProfile() {
   const overall = gradeFromTotal(avg)
   const scoreFor = (uid: string) => rpt.scores.find((x) => x.unit_id === uid)
   const attFor = (uid: string) => rpt.attendance.find((a) => a.unit_id === uid)
+  const unitName = (uid: string) =>
+    rpt.enrollments.find((e) => e.unit_id === uid)?.unit?.name ??
+    rpt.scores.find((s) => s.unit_id === uid)?.unit?.name ?? '—'
+
+  function doExcel() {
+    if (!rpt) return
+    exportExcel(`Rekod_Kokurikulum_${s.name}`, [
+      { name: 'Penyertaan', rows: rpt.enrollments.map((e) => ({ Unit: e.unit?.name, Jawatan: e.role, Peringkat: e.highest_level })) },
+      { name: 'Markah', rows: rpt.scores.map((sc) => ({ Unit: sc.unit?.name, Sesi: sc.session, Total: sc.total, Gred: sc.grade })) },
+      { name: 'Kehadiran', rows: rpt.attendance.map((a) => ({ Unit: unitName(a.unit_id), Hadir: a.present, Jumlah: a.total })) },
+      { name: 'Pencapaian', rows: rpt.achievements.map((a) => ({ Tajuk: a.title, Peringkat: a.level, Kedudukan: a.position, Tarikh: a.date })) },
+    ])
+  }
 
   function doPdf() {
     if (!rpt) return
@@ -83,6 +96,7 @@ export function StudentProfile() {
         <button className="btn btn-ghost" onClick={() => nav(-1)}>← Kembali</button>
         <div style={{ flex: 1 }} />
         <button className="act-btn btn-print" onClick={() => window.print()}>🖨️ Cetak</button>
+        <button className="act-btn btn-excel" onClick={doExcel}>📊 Excel</button>
         <button className="act-btn btn-pdf" onClick={doPdf}>📄 PDF</button>
       </div>
 

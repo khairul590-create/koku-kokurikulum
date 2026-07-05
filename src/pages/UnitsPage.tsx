@@ -6,13 +6,30 @@ import { StudentPicker } from '../components/StudentPicker'
 import { useAuth } from '../lib/auth'
 import { useToast } from '../lib/toast'
 import {
-  Unit, UnitKind, UNIT_KIND_LABEL, Enrollment, Level, LEVELS, LEVEL_LABEL,
+  Unit, UnitKind, UNIT_KINDS, UNIT_KIND_LABEL, Enrollment, Level, LEVELS, LEVEL_LABEL,
 } from '../../shared/types'
 
 const KIND_META: Record<UnitKind, { icon: string; head: string }> = {
   kelab: { icon: '🎨', head: 'ph-orange' },
   beruniform: { icon: '🎖️', head: 'ph-indigo' },
   sukan: { icon: '⚽', head: 'ph-green' },
+}
+
+// One page, 3 tabs — replaces the separate Kelab/Beruniform/Sukan menu items.
+export function UnitKokurikulum() {
+  const [kind, setKind] = useState<UnitKind>('kelab')
+  return (
+    <>
+      <div className="seg-tabs">
+        {UNIT_KINDS.map((k) => (
+          <button key={k} className={'seg-tab' + (kind === k ? ' active' : '')} onClick={() => setKind(k)}>
+            {KIND_META[k].icon} {UNIT_KIND_LABEL[k]}
+          </button>
+        ))}
+      </div>
+      <UnitsPage key={kind} kind={kind} />
+    </>
+  )
 }
 
 export function UnitsPage({ kind }: { kind: UnitKind }) {
