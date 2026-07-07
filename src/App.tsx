@@ -10,6 +10,7 @@ import { PajskPage } from './pages/PajskPage'
 import { KehadiranPage } from './pages/KehadiranPage'
 import { PencapaianPage } from './pages/PencapaianPage'
 import { TakwimPage } from './pages/TakwimPage'
+import { FailDrive } from './pages/FailDrive'
 import { LaporanUnit } from './pages/LaporanUnit'
 import { MuatTurun } from './pages/MuatTurun'
 import { Tetapan } from './pages/Tetapan'
@@ -34,6 +35,7 @@ export default function App() {
         <Route path="kehadiran" element={<KehadiranPage />} />
         <Route path="pencapaian" element={<PencapaianPage />} />
         <Route path="takwim" element={<TakwimPage />} />
+        <Route path="fail-drive" element={<FailDrive />} />
         <Route path="laporan/unit" element={<LaporanUnit />} />
         <Route path="muat-turun" element={<MuatTurun />} />
         <Route path="tetapan" element={<Tetapan />} />
