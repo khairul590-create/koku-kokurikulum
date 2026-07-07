@@ -180,6 +180,21 @@ a { color: inherit; }
   background: #fff; border-radius: 14px; overflow: hidden;
   box-shadow: 0 2px 16px rgba(94, 53, 177, 0.1), 0 1px 4px rgba(0, 0, 0, 0.05);
 }
+
+/* clickable dashboard panels/cards → jump to the data-entry page */
+.panel-link, a.stat-card, a.komp-card {
+  text-decoration: none; color: inherit; cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.panel-link:hover, a.stat-card:hover, a.komp-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 26px rgba(94, 53, 177, 0.22);
+}
+/* auto "Isi" hint on the right of every linked panel header */
+.panel-link .panel-head::after {
+  content: '✏️ Isi'; margin-left: auto; font-size: 12px; font-weight: 700;
+  background: rgba(255, 255, 255, 0.22); padding: 4px 11px; border-radius: 20px; white-space: nowrap;
+}
 .panel-head {
   display: flex; align-items: center; gap: 8px; padding: 13px 16px;
   font-size: 15.5px; font-weight: 700; border-bottom: 1px solid #f0f0f0;

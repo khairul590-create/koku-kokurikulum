@@ -39,31 +39,31 @@ export function Dashboard() {
 
       {/* STAT CARDS */}
       <div className="stat-row">
-        <Stat cls="sc1" icon="🧑‍🎓" val={data.totalStudents} label="Jumlah Murid" />
-        <Stat cls="sc2" icon="🎯" val={data.totalUnits} label="Unit Kokurikulum" />
-        <Stat cls="sc3" icon="✅" val={`${data.participationPct}%`} label="% Penyertaan" />
-        <Stat cls="sc4" icon="📈" val={data.avgPajsk} label="Purata PAJSK" />
-        <Stat cls="sc5" icon="🏆" val={data.totalAchievements} label="Pencapaian" />
-        <Stat cls="sc6" icon="📅" val={`${data.attendancePct}%`} label="% Kehadiran" />
+        <Stat cls="sc1" to="/murid" icon="🧑‍🎓" val={data.totalStudents} label="Jumlah Murid" />
+        <Stat cls="sc2" to="/unit" icon="🎯" val={data.totalUnits} label="Unit Kokurikulum" />
+        <Stat cls="sc3" to="/unit" icon="✅" val={`${data.participationPct}%`} label="% Penyertaan" />
+        <Stat cls="sc4" to="/pajsk" icon="📈" val={data.avgPajsk} label="Purata PAJSK" />
+        <Stat cls="sc5" to="/pencapaian" icon="🏆" val={data.totalAchievements} label="Pencapaian" />
+        <Stat cls="sc6" to="/kehadiran" icon="📅" val={`${data.attendancePct}%`} label="% Kehadiran" />
       </div>
 
       {/* KOMPONEN WAJIB */}
       <div className="komp-row">
         {data.komponen.map((k, i) => (
-          <div className={`komp-card ${['kc-orange', '', 'kc-green'][i]}`} key={k.kind}>
+          <Link className={`komp-card ${['kc-orange', '', 'kc-green'][i]}`} to="/pajsk" key={k.kind}>
             <div className="k-ic">{['🎨', '🎖️', '⚽'][i]}</div>
             <div>
               <div className="k-val">{k.students}</div>
               <div className="k-name">{UNIT_KIND_LABEL[k.kind]}</div>
               <div className="k-sub">{k.units} unit · purata {k.avg} markah</div>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
 
       <div className="mid-row">
         {/* BAR CHART */}
-        <div className="panel panel-penyertaan">
+        <Link className="panel panel-link panel-penyertaan" to="/pajsk">
           <div className="panel-head ph-indigo">
             <span className="ph-icon">📊</span> PURATA MARKAH PAJSK MENGIKUT UNIT
           </div>
@@ -106,11 +106,11 @@ export function Dashboard() {
               </div>
             </div>
           </div>
-        </div>
+        </Link>
 
         {/* RIGHT COLUMN */}
         <div className="right-col">
-          <div className="panel">
+          <Link className="panel panel-link" to="/unit">
             <div className="panel-head ph-green">
               <span className="ph-icon">📍</span> PENYERTAAN MENGIKUT PERINGKAT
             </div>
@@ -133,13 +133,13 @@ export function Dashboard() {
                 ))}
               </div>
             </div>
-          </div>
+          </Link>
         </div>
       </div>
 
       {/* BOTTOM ROW */}
       <div className="bot-row">
-        <div className="panel" style={{ flex: 1.1, minWidth: 300 }}>
+        <Link className="panel panel-link" to="/pajsk" style={{ flex: 1.1, minWidth: 300 }}>
           <div className="panel-head ph-orange">
             <span className="ph-icon">🌟</span> TOP 5 MURID PAJSK TERBAIK
           </div>
@@ -159,9 +159,9 @@ export function Dashboard() {
               </tbody>
             </table>
           </div>
-        </div>
+        </Link>
 
-        <div className="panel" style={{ flex: 1.1, minWidth: 300 }}>
+        <Link className="panel panel-link" to="/kehadiran" style={{ flex: 1.1, minWidth: 300 }}>
           <div className="panel-head ph-red">
             <span className="ph-icon">⚠️</span> KEHADIRAN RENDAH (PERLU PERHATIAN)
           </div>
@@ -181,9 +181,9 @@ export function Dashboard() {
               </tbody>
             </table>
           </div>
-        </div>
+        </Link>
 
-        <div className="panel" style={{ flex: 0.9, minWidth: 240 }}>
+        <Link className="panel panel-link" to="/takwim" style={{ flex: 0.9, minWidth: 240 }}>
           <div className="panel-head ph-teal">
             <span className="ph-icon">🔔</span> AKTIVITI TERKINI
           </div>
@@ -203,7 +203,7 @@ export function Dashboard() {
               )}
             </div>
           </div>
-        </div>
+        </Link>
       </div>
 
       <div className="action-bar" style={{ marginTop: 14 }}>
@@ -214,13 +214,13 @@ export function Dashboard() {
   )
 }
 
-function Stat({ cls, icon, val, label }: { cls: string; icon: string; val: React.ReactNode; label: string }) {
+function Stat({ cls, to, icon, val, label }: { cls: string; to: string; icon: string; val: React.ReactNode; label: string }) {
   return (
-    <div className={`stat-card ${cls}`}>
+    <Link className={`stat-card ${cls}`} to={to}>
       <div className="s-icon">{icon}</div>
       <div className="s-val">{val}</div>
       <div className="s-label">{label}</div>
-    </div>
+    </Link>
   )
 }
 
