@@ -13,6 +13,15 @@ const FOLDER_ID = '1ZB8Efb6JMklpAFNuzhts_OlGGwBk5_c6'
 const UPLOAD_YEAR = 2026
 const UPLOAD_FOLDERS: { icon: string; label: string; units: [string, string][] }[] = [
   {
+    icon: '🗂️', label: 'Setiausaha Kokurikulum',
+    units: [
+      ['CARTA ORGANISASI UNIT KOKUM', '1VMZXvCMXhGTFyoNAEHaM89tnRmkMHn4_'],
+      ['TAKWIM KOKUM', '1PuacyS4gHA60rnZhuVOEBCeCggvdHuNN'],
+      ['LAPORAN AKTIVITI KOKUM', '1EIaodcudauTrxE4xaW3vZCO2T2uB1sjH'],
+      ['DOKUMENTASI / SURAT / KERTAS KONSEP', '1TStHiFriq97NrPgn8pffdbynK6hWcZ5p'],
+    ],
+  },
+  {
     icon: '🎖️', label: 'Unit Beruniform',
     units: [
       ['PENGAKAP', '19DwoI22lT-vE5vXmRQ-Jvs6qZlcjNb6o'],
@@ -83,7 +92,7 @@ export function FailDrive() {
         <div className="panel-body">
           <p style={{ margin: '0 0 12px' }}>
             Tekan unit anda → folder Drive terbuka → tekan <b>Baharu</b> → <b>Muat naik fail</b>.
-            Simpan dalam subfolder yang betul: Carta Organisasi, Rancangan Tahunan atau Laporan Aktiviti.
+            Simpan dalam subfolder yang betul: Carta Organisasi, Laporan Perjumpaan Kokum, Laporan Aktiviti atau Takwim.
           </p>
           {UPLOAD_FOLDERS.map((g) => (
             <div key={g.label} style={{ marginBottom: 14 }}>
