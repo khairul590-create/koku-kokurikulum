@@ -15,6 +15,7 @@ const NAV = [
   { to: '/kehadiran', icon: '📅', label: 'Rekod Kehadiran' },
   { to: '/pencapaian', icon: '🏆', label: 'Pencapaian & Anugerah' },
   { to: '/takwim', icon: '🗓️', label: 'Takwim Aktiviti' },
+  { to: '/opr', icon: '📝', label: 'Jana OPR' },
   { to: '/fail-drive', icon: '📁', label: 'Fail Drive' },
   { section: 'Laporan' },
   { to: '/laporan/unit', icon: '🏫', label: 'Laporan Unit' },
